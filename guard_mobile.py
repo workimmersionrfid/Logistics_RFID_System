@@ -1,76 +1,213 @@
 import flet as ft
+import requests 
+import datetime 
+import os
+import tkinter as tk 
+from tkinter import filedialog 
+
+# 🚨 PASTE YOUR REAL URL HERE! 🚨
+FIREBASE_URL = "https://logistics-rfid-system-default-rtdb.asia-southeast1.firebasedatabase.app/" 
 
 def main(page: ft.Page):
-    # 1. Simulate a Mobile Screen Size
     page.window_width = 400
     page.window_height = 800
-    page.title = "Guard App - Mobile View"
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 30
-    
-    # Center everything horizontally on the screen
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.bgcolor = ft.Colors.BLUE_GREY_50 
+    page.scroll = ft.ScrollMode.ADAPTIVE 
 
-    # 2. Header
-    header = ft.Text("Gate Scanner App", size=24, weight="bold", color=ft.Colors.BLUE_700)
+    header = ft.Text("iAcademy Logistics", size=28, weight="bold", color=ft.Colors.CYAN_800)
+    logo_image = ft.Image(src="RFID Logo.jpg", width=150, height=150, fit=ft.BoxFit.CONTAIN)
+    status_text = ft.Text("Status: Waiting at Gate...", size=16, color=ft.Colors.BLUE_900, weight="w_600")
 
-    # 3. Driver Profile Card (Placeholder)
-    # Notice how we removed 'name=' from ft.Icon to fix the error!
-    photo_placeholder = ft.Container(
-        width=150,
-        height=150,
-        bgcolor=ft.Colors.GREY_300,
-        border_radius=75, # This makes the box a perfect circle
-        content=ft.Icon(ft.Icons.PERSON, size=80, color=ft.Colors.GREY_500),
-        alignment=ft.alignment.center
-    )
-    
-    # Driver text info
     driver_info = ft.Column(
         controls=[
-            ft.Text("Juan Dela Cruz", size=22, weight="bold"),
-            ft.Text("Plate: ABC-1234", size=18, color=ft.Colors.GREY_700),
-            ft.Text("Status: Waiting at Gate...", size=16, color=ft.Colors.ORANGE_500),
+            ft.Text("Juan Dela Cruz", size=22, weight="bold", color=ft.Colors.BLUE_900),
+            ft.Text("Plate: ABC-1234", size=18, color=ft.Colors.CYAN_700),
+            status_text 
         ],
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER # Centers the text
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER 
     )
 
-    # 4. Action Buttons for the Guard
-    inbound_btn = ft.ElevatedButton(
-        text="Log Inbound Cargo", 
-        icon=ft.Icons.LOGIN,
-        bgcolor=ft.Colors.GREEN_600,
-        color=ft.Colors.WHITE,
+    # --- iACADEMY BUSINESS LOGIC DROPDOWNS ---
+    task_dropdown = ft.Dropdown(
+        label="Select Specific Task",
         width=300,
-        height=50
+        options=[
+            ft.dropdown.Option("Asset Collection"),
+            ft.dropdown.Option("Document Routing"),
+            ft.dropdown.Option("Hardware & Event Transport")
+        ]
+    )
+
+    location_dropdown = ft.Dropdown(
+        label="Select Destination",
+        width=300,
+        options=[
+            ft.dropdown.Option("iACADEMY Nexus (Yakal St.)"),
+            ft.dropdown.Option("iACADEMY Plaza (Buendia)"),
+            ft.dropdown.Option("Government Agencies (CHED/DepEd)"),
+            ft.dropdown.Option("Industry Partners (Makati/BGC)")
+        ]
+    )
+
+    delivery_status_dropdown = ft.Dropdown(
+        label="Delivery Status",
+        width=300,
+        options=[
+            ft.dropdown.Option("Ongoing / In Transit"),
+            ft.dropdown.Option("Successful"),
+            ft.dropdown.Option("Failed: Recipient Absent"),
+            ft.dropdown.Option("Failed: Item Damaged"),
+            ft.dropdown.Option("Failed: Cannot Locate Address"),
+            ft.dropdown.Option("Failed: Cannot Contact Person")
+        ]
+    )
+
+    driver_comments = ft.TextField(
+        label="Additional Comments / Notes",
+        width=300,
+        multiline=True, 
+        min_lines=1,
+        max_lines=3,
+        border_color=ft.Colors.BLUE_900
+    )
+
+    selected_document = None 
+
+    def attach_clicked(e):
+        nonlocal selected_document
+        status_text.value = "Opening File Explorer..."
+        status_text.color = ft.Colors.AMBER_700
+        page.update()
+        
+        try:
+            root = tk.Tk()
+            root.withdraw() 
+            root.attributes('-topmost', True) 
+            
+            file_path = filedialog.askopenfilename()
+            root.destroy() 
+            
+            if file_path:
+                selected_document = os.path.basename(file_path)
+                status_text.value = f"Attached: {selected_document}"
+                status_text.color = ft.Colors.GREEN_700
+            else:
+                status_text.value = "Upload cancelled."
+                status_text.color = ft.Colors.ORANGE_500
+        except Exception as ex:
+            status_text.value = "Error opening file explorer."
+            status_text.color = ft.Colors.RED_600
+            
+        page.update()
+
+    # --- UPDATED: DATABASE LOGIC WITH CLEAR_FIELDS RULE ---
+    def send_log_to_database(action_type, clear_fields=True):
+        nonlocal selected_document 
+        
+        log_data = {
+            "driver_name": "Juan Dela Cruz",
+            "plate_number": "ABC-1234",
+            "action": action_type,
+            "task": task_dropdown.value if task_dropdown.value else "Not Selected",
+            "location": location_dropdown.value if location_dropdown.value else "Not Selected",
+            "delivery_status": delivery_status_dropdown.value if delivery_status_dropdown.value else "Not Selected", 
+            "comments": driver_comments.value if driver_comments.value else "None", 
+            "document_attached": selected_document if selected_document else "None", 
+            "latitude": "14.5615", 
+            "longitude": "121.0156", 
+            "timestamp": str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        }
+
+        try:
+            endpoint = FIREBASE_URL + "logs.json"
+            response = requests.post(endpoint, json=log_data)
+
+            if response.status_code == 200:
+                status_text.value = f"Success: {action_type} Logged!"
+                status_text.color = ft.Colors.GREEN_600
+                
+                # ONLY clear the form if we are officially done with the task (Time Out)
+                if clear_fields:
+                    selected_document = None 
+                    task_dropdown.value = None
+                    location_dropdown.value = None
+                    delivery_status_dropdown.value = None
+                    driver_comments.value = "" 
+            else:
+                status_text.value = "Error: Database refused connection."
+                status_text.color = ft.Colors.RED_600
+        except Exception as e:
+            status_text.value = "Error: No internet connection."
+            status_text.color = ft.Colors.RED_600
+            
+        page.update()
+
+    # --- UPDATED: BUTTON TRIGGERS ---
+    def clock_in_clicked(e):
+        send_log_to_database("Driver Shift Clock-In", clear_fields=True) 
+
+    def clock_out_clicked(e):
+        send_log_to_database("Driver Shift Clock-Out", clear_fields=True) 
+
+    def task_time_in_clicked(e):
+        # clear_fields=False keeps the dropdowns filled out while they work!
+        send_log_to_database("Task Time In (Arrived)", clear_fields=False) 
+
+    def task_time_out_clicked(e):
+        # clear_fields=True resets the app for the next delivery
+        send_log_to_database("Task Time Out (Completed)", clear_fields=True) 
+
+    # --- BUTTON DESIGNS ---
+    attendance_row = ft.Row(
+        controls=[
+            ft.ElevatedButton("Clock In (Shift)", icon=ft.Icons.ACCESS_TIME, bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE, on_click=clock_in_clicked),
+            ft.ElevatedButton("Clock Out (Shift)", icon=ft.Icons.TIMER_OFF, bgcolor=ft.Colors.RED_700, color=ft.Colors.WHITE, on_click=clock_out_clicked),
+        ],
+        alignment=ft.MainAxisAlignment.CENTER
+    )
+
+    upload_btn = ft.ElevatedButton(
+        content=ft.Text("Attach Proof/Photo", size=14),
+        icon=ft.Icons.UPLOAD_FILE, bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
+        width=300, height=45, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)),
+        on_click=attach_clicked 
+    )
+
+    task_time_in_btn = ft.ElevatedButton(
+        content=ft.Text("Task Time In (Arrived)", size=16), 
+        icon=ft.Icons.LOCATION_ON, bgcolor=ft.Colors.TEAL_700, color=ft.Colors.WHITE,
+        width=300, height=55, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)),
+        on_click=task_time_in_clicked
     )
     
-    outbound_btn = ft.ElevatedButton(
-        text="Log Outbound Empty", 
-        icon=ft.Icons.LOGOUT,
-        bgcolor=ft.Colors.RED_600,
-        color=ft.Colors.WHITE,
-        width=300,
-        height=50
+    task_time_out_btn = ft.ElevatedButton(
+        content=ft.Text("Submit Task & Time Out", size=16), 
+        icon=ft.Icons.CHECK_CIRCLE, bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE,
+        width=300, height=55, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)),
+        on_click=task_time_out_clicked
     )
 
-    # 5. Assemble the Vertical Mobile Layout
-    mobile_layout = ft.Column(
-        controls=[
-            header,
-            ft.Divider(height=20, color=ft.Colors.TRANSPARENT), # Invisible spacer
-            photo_placeholder,
-            ft.Divider(height=10, color=ft.Colors.TRANSPARENT), 
-            driver_info,
-            ft.Divider(height=40, color=ft.Colors.TRANSPARENT), 
-            inbound_btn,
-            outbound_btn
-        ],
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    # Assemble the screen 
+    page.add(
+        header, 
+        logo_image, 
+        driver_info, 
+        ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
+        attendance_row, 
+        ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
+        task_dropdown,      
+        location_dropdown,  
+        task_time_in_btn, # <--- NEW TIME IN BUTTON!
+        ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
+        delivery_status_dropdown, 
+        driver_comments, 
+        ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
+        upload_btn, 
+        ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+        task_time_out_btn # <--- NEW TIME OUT BUTTON!
     )
 
-    # Add everything to the screen
-    page.add(mobile_layout)
-
-# Launch the app
 ft.run(main)
