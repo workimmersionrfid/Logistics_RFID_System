@@ -1,51 +1,72 @@
 import flet as ft
 
 def main(page: ft.Page):
-    # Setup the Page
-    page.title = "Logistics & Driver RFID System - Admin Dashboard"
+    # 1. Simulate a Mobile Screen Size
+    page.window_width = 400
+    page.window_height = 800
+    page.title = "Guard App - Mobile View"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.padding = 20
+    page.padding = 30
+    
+    # Center everything horizontally
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
-    # 1. Header (Fixed: ft.Colors with a capital C)
-    header = ft.Text("Warehouse Admin Dashboard", size=32, weight="bold", color=ft.Colors.BLUE_700)
+    # 2. Header
+    header = ft.Text("Gate Scanner App", size=24, weight="bold", color=ft.Colors.BLUE_700)
 
-    # 2. Table of Drivers
-    drivers_table = ft.DataTable(
-        columns=[
-            ft.DataColumn(ft.Text("Driver Name")),
-            ft.DataColumn(ft.Text("Plate Number")),
-            ft.DataColumn(ft.Text("Status")),
-        ],
-        rows=[
-            ft.DataRow(cells=[ft.DataCell(ft.Text("Juan Dela Cruz")), ft.DataCell(ft.Text("ABC-1234")), ft.DataCell(ft.Text("Inside"))]),
-            ft.DataRow(cells=[ft.DataCell(ft.Text("Maria Santos")), ft.DataCell(ft.Text("XYZ-9876")), ft.DataCell(ft.Text("Departed"))]),
-        ]
+    # 3. Driver Profile Card (Placeholder)
+    photo_placeholder = ft.Container(
+        width=150,
+        height=150,
+        bgcolor=ft.Colors.GREY_300,
+        border_radius=75, # Creates a perfect circle
+        content=ft.Icon(name=ft.Icons.PERSON, size=80, color=ft.Colors.GREY_500),
+        alignment=ft.alignment.center
     )
-
-    # 3. Live Logs Box (Fixed: ft.Colors with a capital C)
-    live_logs = ft.Container(
-        content=ft.Text("Waiting for RFID taps...", color=ft.Colors.GREY_600),
-        bgcolor=ft.Colors.GREY_200,
-        padding=20,
-        border_radius=10,
-        height=200,
-        width=300
-    )
-
-    # 4. Organize Layout (Side-by-Side)
-    main_layout = ft.Row(
+    
+    driver_info = ft.Column(
         controls=[
-            # Left side: Drivers Table
-            ft.Column([ft.Text("Registered Drivers", size=20, weight="bold"), drivers_table], expand=True),
-            # Right side: Live Logs
-            ft.Column([ft.Text("Live Logs", size=20, weight="bold"), live_logs])
+            ft.Text("Juan Dela Cruz", size=22, weight="bold"),
+            ft.Text("Plate: ABC-1234", size=18, color=ft.Colors.GREY_700),
+            ft.Text("Status: Waiting at Gate...", size=16, color=ft.Colors.ORANGE_500),
         ],
-        alignment=ft.MainAxisAlignment.START,
-        vertical_alignment=ft.CrossAxisAlignment.START
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER
     )
 
-    # Add everything to the screen
-    page.add(header, ft.Divider(), main_layout)
+    # 4. Action Buttons
+    inbound_btn = ft.ElevatedButton(
+        text="Log Inbound Cargo", 
+        icon=ft.Icons.LOGIN,
+        bgcolor=ft.Colors.GREEN_600,
+        color=ft.Colors.WHITE,
+        width=300,
+        height=50
+    )
+    
+    outbound_btn = ft.ElevatedButton(
+        text="Log Outbound Empty", 
+        icon=ft.Icons.LOGOUT,
+        bgcolor=ft.Colors.RED_600,
+        color=ft.Colors.WHITE,
+        width=300,
+        height=50
+    )
 
-# Run the app (Fixed: changed app() to run() to remove the warning)
+    # 5. Assemble Layout
+    mobile_layout = ft.Column(
+        controls=[
+            header,
+            ft.Divider(height=20, color=ft.Colors.TRANSPARENT), # Spacer
+            photo_placeholder,
+            ft.Divider(height=10, color=ft.Colors.TRANSPARENT), 
+            driver_info,
+            ft.Divider(height=40, color=ft.Colors.TRANSPARENT), 
+            inbound_btn,
+            outbound_btn
+        ],
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    )
+
+    page.add(mobile_layout)
+
 ft.run(main)
