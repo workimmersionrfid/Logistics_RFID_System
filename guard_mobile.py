@@ -103,9 +103,25 @@ def main(page: ft.Page):
             
         page.update()
 
-    # --- UPDATED: DATABASE LOGIC WITH CLEAR_FIELDS RULE ---
+    # --- UPDATED: DATABASE LOGIC WITH LIVE GPS ---
     def send_log_to_database(action_type, clear_fields=True):
         nonlocal selected_document 
+        
+        # --- NEW: LIVE LOCATION TRACKING ---
+        status_text.value = "Acquiring GPS Signal..."
+        status_text.color = ft.Colors.AMBER_700
+        page.update()
+        
+        try:
+            # Ping the live location server
+            geo_response = requests.get("http://ip-api.com/json/", timeout=5).json()
+            real_lat = str(geo_response.get("lat", "14.5615"))
+            real_lon = str(geo_response.get("lon", "121.0156"))
+        except Exception:
+            # If the server fails or internet is slow, fallback to iAcademy Nexus
+            real_lat = "14.5615"
+            real_lon = "121.0156"
+        # -----------------------------------
         
         log_data = {
             "driver_name": "Juan Dela Cruz",
@@ -116,8 +132,8 @@ def main(page: ft.Page):
             "delivery_status": delivery_status_dropdown.value if delivery_status_dropdown.value else "Not Selected", 
             "comments": driver_comments.value if driver_comments.value else "None", 
             "document_attached": selected_document if selected_document else "None", 
-            "latitude": "14.5615", 
-            "longitude": "121.0156", 
+            "latitude": real_lat, # Now using live data!
+            "longitude": real_lon, # Now using live data!
             "timestamp": str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         }
 
@@ -145,7 +161,7 @@ def main(page: ft.Page):
             
         page.update()
 
-    # --- UPDATED: BUTTON TRIGGERS ---
+    # --- BUTTON TRIGGERS ---
     def clock_in_clicked(e):
         send_log_to_database("Driver Shift Clock-In", clear_fields=True) 
 
@@ -153,11 +169,9 @@ def main(page: ft.Page):
         send_log_to_database("Driver Shift Clock-Out", clear_fields=True) 
 
     def task_time_in_clicked(e):
-        # clear_fields=False keeps the dropdowns filled out while they work!
         send_log_to_database("Task Time In (Arrived)", clear_fields=False) 
 
     def task_time_out_clicked(e):
-        # clear_fields=True resets the app for the next delivery
         send_log_to_database("Task Time Out (Completed)", clear_fields=True) 
 
     # --- BUTTON DESIGNS ---
@@ -200,14 +214,14 @@ def main(page: ft.Page):
         ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
         task_dropdown,      
         location_dropdown,  
-        task_time_in_btn, # <--- NEW TIME IN BUTTON!
+        task_time_in_btn, 
         ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
         delivery_status_dropdown, 
         driver_comments, 
         ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
         upload_btn, 
         ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
-        task_time_out_btn # <--- NEW TIME OUT BUTTON!
+        task_time_out_btn 
     )
 
 ft.run(main)

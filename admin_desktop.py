@@ -45,14 +45,13 @@ def main(page: ft.Page):
                     lat = log.get('latitude', 'N/A')
                     lon = log.get('longitude', 'N/A')
 
-                    # 2. Create the Live Map Tracking Button
+                    # 2. Create the Live Map Tracking Button (FIXED: removed 'text=')
                     track_btn = ft.ElevatedButton(
-                        "Live Map Tracking",
+                        "Live Map Tracking", 
                         icon=ft.Icons.MAP,
                         bgcolor=ft.Colors.TEAL_600,
                         color=ft.Colors.WHITE,
-                        # This command dynamically builds the Google Maps URL!
-                        on_click=lambda e, lat=lat, lon=lon: page.launch_url(f"https://www.google.com/maps/search/?api=1&query={lat},{lon}")
+                        url=f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
                     )
 
                     # 3. Exception Handling: Disable the button if it's an old log without GPS data
@@ -60,6 +59,7 @@ def main(page: ft.Page):
                         track_btn.disabled = True
                         track_btn.text = "No GPS Data Available"
                         track_btn.bgcolor = ft.Colors.BLUE_GREY_200
+                        track_btn.url = None # Remove the link if there is no data
 
                     # --- BUILD THE CARD ---
                     log_card = ft.Card(
@@ -79,8 +79,8 @@ def main(page: ft.Page):
                                 ft.Divider(height=1, color=ft.Colors.BLUE_GREY_100),
                                 ft.Text(f"📎 Proof: {log.get('document_attached', 'None')}", size=14, italic=True),
                                 ft.Text(f"💬 Notes: {log.get('comments', 'None')}", size=14, italic=True),
-                                ft.Divider(height=5, color=ft.Colors.TRANSPARENT), # Spacing
-                                track_btn # <-- NEW MAP BUTTON ADDED HERE!
+                                ft.Divider(height=5, color=ft.Colors.TRANSPARENT), 
+                                track_btn 
                             ])
                         )
                     )
@@ -90,6 +90,7 @@ def main(page: ft.Page):
         
         page.update()
 
+    # FIXED: removed 'text='
     refresh_btn = ft.ElevatedButton(
         "Refresh Live Data", 
         icon=ft.Icons.REFRESH, 
